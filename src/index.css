@@ -1,0 +1,381 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------
+   DESIGN TOKENS (single source of truth — see docs/DESIGN.md)
+   ------------------------------------------------------------------ */
+:root {
+  --color-bg: #FFFFFF;
+  --color-bg-alt: #F8FAFC;
+  --color-accent: #2563EB;
+  --color-text: #0F172A;
+  --color-text-muted: #64748B;
+  --color-border: #E2E8F0;
+  --color-accent-soft: #EFF6FF;
+  --color-silver: #94A3B8;
+  --color-accent-hover: #1D4ED8;
+  --color-control-border: #64748B; /* 4.55:1 on #F8FAFC: WCAG 1.4.11 (hairline #E2E8F0 is decorative only) */
+  --color-success: #047857;
+  --color-success-bg: #ECFDF5;
+  --color-warning: #B45309;
+  --color-warning-bg: #FFFBEB;
+  --color-error: #BE123C;
+  --color-error-bg: #FFF1F2;
+
+  --radius-card: 1rem;
+  --radius-control: 0.75rem;
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-raised: 0 8px 24px -6px rgba(37, 99, 235, 0.14);
+  --motion-fast: 150ms;
+  --motion-base: 250ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275); /* a "pluck": a tiny overshoot on release */
+}
+
+html {
+  /* sticky header and fixed player never cover a focused control or an anchor target (WCAG 2.4.11) */
+  scroll-padding-top: 6rem;
+  scroll-padding-bottom: calc(var(--player-h, 0px) + 1rem);
+}
+
+strong,
+b {
+  font-weight: 600; /* explicit, so nested bold never becomes weight 900 */
+}
+
+body {
+  font-size: 1rem;
+  line-height: 1.6;
+  /* Worst-case content: one very long unbroken word must wrap, never push the page sideways. */
+  overflow-wrap: anywhere;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* Visible keyboard focus everywhere: 2 px accent ring, 2 px offset (WCAG 2.4.7 / 2.4.11) */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+  border-color: var(--color-accent);
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  z-index: 100;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-control);
+  background: var(--color-accent);
+  color: #fff;
+  font-weight: 600;
+  transition: top var(--motion-fast) var(--ease-out);
+}
+.skip-link:focus {
+  top: 1rem;
+}
+
+@layer utilities {
+  .swiss-card {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Form controls: visible 3:1 boundary (WCAG 1.4.11), 16 px text so phones do not zoom */
+  .control {
+    width: 100%;
+    min-height: 3rem;
+    padding: 0 1rem;
+    border-radius: var(--radius-control);
+    border: 1.5px solid var(--color-control-border);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 1rem;
+  }
+  .control::placeholder {
+    color: var(--color-text-muted);
+  }
+  .control[aria-invalid='true'] {
+    border: 2px solid var(--color-error);
+  }
+
+  .swiss-card-active {
+    background: linear-gradient(180deg, #ffffff 0%, var(--color-accent-soft) 100%);
+    border: 2px solid var(--color-accent);
+    box-shadow: var(--shadow-raised);
+  }
+
+  /* Glass is limited to the functional layer (header/player). Content stays flat. */
+  .glass-header-light {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .glass-player-light {
+    background: var(--color-bg);
+    border-top: 1px solid var(--color-border);
+    box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.06);
+  }
+}
+
+/* Custom White & Blue Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg-alt);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-silver);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent);
+}
+
+/* Motion is meaning, not decoration — honour the OS setting (WCAG 2.3.3) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Pressed state (NN/g button states): enabled, hover, focus, pressed, disabled.
+   Solid-blue controls go one step darker (white on #1E40AF is above 8:1); every button gives
+   a 2 percent press so a tap is acknowledged inside ~100 ms. Transform does not change contrast. */
+#root :is(a, button)[class*='bg-[#2563EB]']:active:not(:disabled):not([aria-disabled='true']) {
+  background-color: #1e40af;
+}
+#root button:active:not(:disabled):not([aria-disabled='true']),
+#root a[class*='rounded-xl'][class*='h-1']:active {
+  transform: scale(0.98);
+}
+
+/* ------------------------------------------------------------------
+   TOUCH TARGETS (guideline: >= 44px; WCAG 2.5.8 requires >= 24px)
+   Found by the UX audit: nav links, chips, Copy and contact links were 20-38px.
+   ------------------------------------------------------------------ */
+#root button:not(.target-auto),
+#root [role='button']:not(.target-auto),
+#root header nav a,
+#root footer a,
+#root a[href^='mailto:'],
+#root a[href^='tel:'],
+#root a[href^='https://www.tiktok.com'] {
+  min-height: 44px;
+  min-width: 44px;
+}
+#root header nav a,
+#root footer a,
+#root a[href^='mailto:'],
+#root a[href^='tel:'] {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ------------------------------------------------------------------
+   MATERIAL FALLBACKS: translucency is a preference, never a requirement
+   ------------------------------------------------------------------ */
+@media (prefers-reduced-transparency: reduce) {
+  header[class*='backdrop-blur'],
+  [class*='backdrop-blur'],
+  .glass-header-light {
+    background: var(--color-bg) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  [class*='backdrop-blur'],
+  .glass-header-light {
+    background: var(--color-bg) !important;
+  }
+}
+@media (prefers-contrast: more) {
+  :root {
+    --color-border: #94A3B8;
+    --color-text-muted: #334155;
+  }
+  [class*='backdrop-blur'] {
+    background: var(--color-bg) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+@media (forced-colors: active) {
+  [class*='backdrop-blur'] {
+    backdrop-filter: none !important;
+    border-color: CanvasText !important;
+  }
+  :focus-visible {
+    outline-color: Highlight;
+  }
+}
+
+/* Reserve room for the fixed audio player: never less than pb-32 (8rem), never less than its real height + 1.5rem */
+#main {
+  padding-bottom: max(8rem, calc(var(--player-h, 0px) + 1.5rem));
+}
+
+/* Range sliders (seek, volume): visible 6 px track, filled part, 18 px thumb */
+input[type='range'].range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+input[type='range'].range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: linear-gradient(to right, var(--color-accent) var(--fill, 0%), var(--color-border) var(--fill, 0%));
+}
+input[type='range'].range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -6px;
+  border-radius: 9999px;
+  background: var(--color-accent);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+input[type='range'].range::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--color-border);
+}
+input[type='range'].range::-moz-range-progress {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--color-accent);
+}
+input[type='range'].range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: var(--color-accent);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+/* ------------------------------------------------------------------
+   FEEL OF MUSIC (decorative only: aria-hidden, no text, tokens only)
+   --beat = seconds per beat of the current track, set on the page wrapper.
+   Motion plays only while music plays, pauses with the hero "Pause animation"
+   button (data-motion="paused") and is removed by prefers-reduced-motion.
+   ------------------------------------------------------------------ */
+@keyframes mu-eq { 0%, 100% { transform: scaleY(0.25); } 50% { transform: scaleY(1); } }
+@keyframes mu-drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes mu-swell { 0%, 100% { transform: scaleY(0.55); } 50% { transform: scaleY(1); } }
+@keyframes mu-spin { to { transform: rotate(360deg); } }
+/* One bar of four beats: a strong downbeat, then three soft ones. Rhythm is repetition WITH variation, not a metronome. */
+@keyframes mu-ring {
+  0% { opacity: 0.5; transform: scale(1); }
+  16% { opacity: 0; transform: scale(1.035); }
+  25% { opacity: 0.2; transform: scale(1); }
+  36% { opacity: 0; transform: scale(1.02); }
+  50% { opacity: 0.2; transform: scale(1); }
+  61% { opacity: 0; transform: scale(1.02); }
+  75% { opacity: 0.2; transform: scale(1); }
+  86%, 100% { opacity: 0; transform: scale(1.02); }
+}
+
+.mu-eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 16px; width: 20px; flex: none; }
+.mu-eq > span {
+  display: block; width: 3px; height: 100%; border-radius: 2px; background: var(--color-accent);
+  transform-origin: bottom; transform: scaleY(var(--s, 0.6));
+}
+.mu-eq.is-playing > span {
+  animation: mu-eq calc(var(--beat, 0.83s) * var(--m, 1)) ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * -0.17s);
+}
+
+.mu-waves { position: absolute; left: 0; right: 0; bottom: 0; height: 96px; overflow: hidden; pointer-events: none; z-index: 1;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 40%); mask-image: linear-gradient(to bottom, transparent, #000 40%); }
+.mu-wave { position: absolute; inset: 0; transform-origin: center; transform: scaleY(0.55); transition: transform 600ms var(--ease-out); }
+.mu-wave > svg { display: block; width: 200%; height: 100%; animation: mu-drift 48s linear infinite; }
+.mu-wave-b > svg { animation-duration: 36s; animation-direction: reverse; }
+.mu-wave-c > svg { animation-duration: 64s; }
+.mu-waves:not(.is-playing) .mu-wave > svg { animation-play-state: paused; }
+.mu-waves.is-playing .mu-wave { transform: scaleY(1); }
+.mu-waves.is-playing .mu-wave-a { animation: mu-swell calc(var(--beat, 0.83s) * 4) ease-in-out infinite; }
+.mu-waves.is-playing .mu-wave-b { animation: mu-swell calc(var(--beat, 0.83s) * 3) ease-in-out infinite; }
+.mu-waves.is-playing .mu-wave-c { animation: mu-swell calc(var(--beat, 0.83s) * 6) ease-in-out infinite; }
+/* three different swell lengths (4 : 3 : 6 beats) and three drift speeds, so the lines never move in lock-step */
+.mu-waves.is-playing .mu-wave-a > svg { animation-duration: calc(var(--beat, 0.83s) * 24); }
+.mu-waves.is-playing .mu-wave-b > svg { animation-duration: calc(var(--beat, 0.83s) * 16); }
+.mu-waves.is-playing .mu-wave-c > svg { animation-duration: calc(var(--beat, 0.83s) * 40); }
+
+.mu-vinyl { display: none; position: absolute; width: 64%; aspect-ratio: 1; left: -34%; top: 34%; z-index: 0; pointer-events: none; border-radius: 9999px; box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12); }
+@media (min-width: 1024px) { .mu-vinyl { display: block; } }
+.mu-vinyl > svg { display: block; width: 100%; height: 100%; animation: mu-spin calc(var(--beat, 0.83s) * 4) linear infinite; animation-play-state: paused; }
+.mu-vinyl.is-playing > svg { animation-play-state: running; }
+
+.mu-ring { position: absolute; inset: 0; border-radius: var(--radius-card); border: 2px solid var(--color-accent); pointer-events: none; opacity: 0;
+  animation: mu-ring calc(var(--beat, 0.83s) * 4) linear infinite; }
+
+[data-motion='paused'] :is(.mu-eq > span, .mu-wave, .mu-wave > svg, .mu-vinyl > svg, .mu-ring) { animation-play-state: paused !important; }
+[data-motion='paused'] .mu-ring { opacity: 0; animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .mu-eq.is-playing > span { animation: none; }
+  .mu-wave, .mu-wave > svg, .mu-vinyl > svg, .mu-ring { animation: none !important; }
+  .mu-ring { opacity: 0; }
+}
+
+/* PLUCK: buttons answer a press like a plucked string: quick down, a tiny spring back (transform only). */
+#root :is(button, a[class*='rounded-xl']):not(:disabled) {
+  transition: transform var(--motion-base) var(--ease-spring), background-color var(--motion-fast) ease,
+    color var(--motion-fast) ease, border-color var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+}
+#root button:active:not(:disabled):not([aria-disabled='true']),
+#root a[class*='rounded-xl'][class*='h-1']:active {
+  transform: scale(0.97);
+}
+
+/* ------------------------------------------------------------------
+   RESPONSIVE (phone first)
+   A fieldset legend sits ON the border line, so a legend that wraps to two lines is cut by the line.
+   On phones the legend becomes a normal heading inside the box instead.
+   ------------------------------------------------------------------ */
+@media (max-width: 639px) {
+  fieldset > legend {
+    float: left;
+    width: 100%;
+    padding: 0;
+    margin: 0 0 1rem;
+  }
+  fieldset > legend + * {
+    clear: both;
+  }
+}
+
+/* ------------------------------------------------------------------
+   SKELETON: a pale blue-grey block with one slow highlight sweep.
+   Reduced motion: the same block, still.
+   ------------------------------------------------------------------ */
+.skeleton {
+  background: linear-gradient(90deg, #EFF6FF 0%, #E2E8F0 45%, #EFF6FF 90%);
+  background-size: 200% 100%;
+  animation: sk-sweep 1.6s ease-in-out infinite;
+}
+@keyframes sk-sweep { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; background: #EFF6FF; }
+}
