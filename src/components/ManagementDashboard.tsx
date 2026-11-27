@@ -17,6 +17,12 @@ import {
   Sliders,
   Download,
   Upload,
+  Check,
+  Circle,
+  Inbox,
+  ShieldAlert,
+  ImageIcon,
+  Film,
 } from 'lucide-react';
 import type {
   PortfolioConfig,
@@ -29,6 +35,8 @@ import type {
 import { useDialog } from '../hooks/useDialog';
 import { parsePortfolioBackup, type PortfolioBackup } from '../utils/validation';
 import { buildPublishedContent } from '../utils/publish';
+import { tiktokProfileUrl, upcomingPublicEvents } from '../utils/content';
+import { isSafeImageUrl, parseVideoUrl } from '../utils/media';
 import {
   transposeChordToken,
   transposeLyricsWithBrackets,
@@ -82,7 +90,12 @@ export const ManagementDashboard: React.FC<ManagementDashboardProps> = ({
   onImportBackup,
   onNotify,
 }) => {
-  const [activeTab, setActiveTab] = useState<DashboardTab>('profile');
+  // Level 1 of the Studio hierarchy: when someone is waiting for an answer, start on the inquiries.
+  const newInquiries = bookings.filter((b) => b.status === 'Inquiry').length;
+  const [activeTab, setActiveTab] = useState<DashboardTab>(() => (newInquiries > 0 ? 'bookings' : 'profile'));
+  const [mediaKind, setMediaKind] = useState<'image' | 'video'>('video');
+  const [mediaUrl, setMediaUrl] = useState('');
+  const [mediaTitle, setMediaTitle] = useState('');
   const [selectedSetlistId, setSelectedSetlistId] = useState<string>(
     setlists[0]?.id || ''
   );
@@ -145,6 +158,14 @@ export const ManagementDashboard: React.FC<ManagementDashboardProps> = ({
   const isFirstUse =
     tracks.length === 0 && bookings.length === 0 && !profile.biography && !profile.heroTagline && profile.highlights.length === 0;
 
+  const checklist: { label: string; done: boolean; tab: DashboardTab }[] = [
+    { label: 'Write the hero tagline', done: profile.heroTagline.trim().length > 0, tab: 'profile' },
+    { label: 'Write the biography', done: profile.biography.trim().length > 0, tab: 'profile' },
+    { label: 'Add a song', done: tracks.length > 0, tab: 'studio' },
+    { label: 'Add an upcoming date and show it on the site', done: upcomingPublicEvents(bookings).length > 0, tab: 'bookings' },
+    { label: 'Add a reply note for bookers (optional)', done: Boolean(profile.replyNote?.trim()), tab: 'profile' },
+  ];
+
   const activeSetlist =
     setlists.find((s) => s.id === selectedSetlistId) || setlists[0];
 
@@ -192,6 +213,7 @@ export const ManagementDashboard: React.FC<ManagementDashboardProps> = ({
       chordProgression: '',
       lyrics: '',
       arrangementNotes: '',
+      audioUrl: '',
     });
   };
 
@@ -308,57 +330,75 @@ export const ManagementDashboard: React.FC<ManagementDashboardProps> = ({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        {/* LEVEL 1: who is waiting for an answer */}
+        {newInquiries > 0 && (
+          <div role="status" className="rounded-xl bg-white border-2 border-[#2563EB] p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+            <p className="flex items-center gap-3 text-base text-[#0F172A]">
+              <Inbox className="w-6 h-6 text-[#2563EB] shrink-0" aria-hidden="true" />
+              <span>
+                <strong>{newInquiries} new booking {newInquiries === 1 ? 'inquiry' : 'inquiries'}</strong> waiting for a reply.
+              </span>
+            </p>
+            <button
+              type="button"
+              onClick={() => setActiveTab('bookings')}
+              className="h-11 px-5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold text-sm"
+            >
+              Review inquiries
+            </button>
+          </div>
+        )}
+
+        {/* LEVEL 2: what the public site still lacks (the site never shows invented content) */}
+        {checklist.some((c) => !c.done) && (
+          <div className="rounded-xl bg-white border border-[#E2E8F0] p-4 sm:p-5">
+            <h2 className="text-base font-bold text-[#0F172A]">Before you publish</h2>
+            <ul className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
+              {checklist.map((c) => (
+                <li key={c.label} className="flex items-center gap-2 text-sm">
+                  {c.done ? (
+                    <Check className="w-4 h-4 text-[#047857] shrink-0" aria-label="Done" />
+                  ) : (
+                    <Circle className="w-4 h-4 text-[#64748B] shrink-0" aria-label="Still to do" />
+                  )}
+                  {c.done ? (
+                    <span className="text-[#64748B]">{c.label}</span>
+                  ) : (
+                    <button type="button" onClick={() => setActiveTab(c.tab)} className="text-[#2563EB] font-semibold hover:underline underline-offset-4 text-left">
+                      {c.label}
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:flex sm:flex-wrap sm:items-center gap-3">
           <button
             type="button"
             onClick={() => setShowNewTrackModal(true)}
-            className="h-12 px-6 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold text-base flex items-center gap-2 transition-colors"
+            className={`h-12 px-6 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-colors ${
+              newInquiries > 0
+                ? 'bg-white hover:bg-[#EFF6FF] text-[#2563EB] border-[1.5px] border-[#2563EB]'
+                : 'bg-[#2563EB] hover:bg-[#1D4ED8] text-white'
+            }`}
           >
             <Plus className="w-4 h-4" aria-hidden="true" /> Add track
           </button>
           <button
             type="button"
             onClick={() => setShowNewEventModal(true)}
-            className="h-12 px-5 rounded-xl bg-white hover:bg-[#EFF6FF] text-[#2563EB] border-[1.5px] border-[#2563EB] font-semibold text-base flex items-center gap-2 transition-colors"
+            className="h-12 px-5 rounded-xl bg-white hover:bg-[#EFF6FF] text-[#2563EB] border-[1.5px] border-[#2563EB] font-semibold text-base flex items-center justify-center gap-2 transition-colors"
           >
             <Plus className="w-4 h-4" aria-hidden="true" /> Add event
           </button>
           <button
             type="button"
             onClick={handleExportPublished}
-            className="h-12 px-5 rounded-xl bg-white hover:bg-[#EFF6FF] text-[#2563EB] border-[1.5px] border-[#2563EB] font-semibold text-base flex items-center gap-2 transition-colors"
+            className="h-12 px-5 rounded-xl bg-white hover:bg-[#EFF6FF] text-[#2563EB] border-[1.5px] border-[#2563EB] font-semibold text-base flex items-center justify-center gap-2 transition-colors"
           >
             <Upload className="w-4 h-4" aria-hidden="true" /> Export for publishing
-          </button>
-          <button
-            type="button"
-            onClick={handleExportJSON}
-            className="h-12 px-4 rounded-xl bg-white hover:bg-[#EFF6FF] text-[#0F172A] border-[1.5px] border-[#64748B] font-semibold text-sm flex items-center gap-1.5 transition-colors"
-          >
-            <Download className="w-4 h-4 text-[#2563EB]" aria-hidden="true" /> Backup (all data)
-          </button>
-          <input
-            ref={importInputRef}
-            type="file"
-            accept="application/json,.json"
-            onChange={handleImportFile}
-            className="sr-only"
-            tabIndex={-1}
-            aria-hidden="true"
-          />
-          <button
-            type="button"
-            onClick={() => importInputRef.current?.click()}
-            className="h-12 px-4 rounded-xl bg-white hover:bg-[#EFF6FF] text-[#0F172A] border-[1.5px] border-[#64748B] font-semibold text-sm flex items-center gap-1.5 transition-colors"
-          >
-            <Upload className="w-4 h-4 text-[#2563EB]" aria-hidden="true" /> Restore backup
-          </button>
-          <button
-            type="button"
-            onClick={handleClearAll}
-            className="h-12 px-4 rounded-xl bg-white hover:bg-[#FFF1F2] text-[#BE123C] border-[1.5px] border-[#BE123C] font-semibold text-sm flex items-center gap-1.5 transition-colors"
-          >
-            <RotateCcw className="w-4 h-4" aria-hidden="true" /> Clear all data
           </button>
         </div>
 
@@ -366,8 +406,8 @@ export const ManagementDashboard: React.FC<ManagementDashboardProps> = ({
           <div className="rounded-xl bg-white border border-[#E2E8F0] p-5">
             <h2 className="text-lg font-serif font-bold text-[#0F172A]">How this works</h2>
             <ol className="mt-2 space-y-1.5 text-base text-[#0F172A] list-decimal ml-5">
-              <li>Fill in <strong>1. Profile</strong>: tagline, biography and stage rider (the About section appears once it has text).</li>
-              <li>Add your songs in <strong>2. Tracks</strong> and your dates in <strong>4. Events</strong>. Mark a date <em>Shown on Site</em> to make it public.</li>
+              <li>Fill in <strong>Profile</strong>: tagline, biography and stage rider (the About section appears once it has text).</li>
+              <li>Add your songs in <strong>Tracks</strong> and your dates in <strong>Inquiries &amp; events</strong>. Mark a date <em>Shown on Site</em> to make it public.</li>
               <li>Press <strong>Export for publishing</strong>, replace <code className="font-mono text-sm">public/content.json</code> with the file, and deploy.</li>
             </ol>
             <p className="text-sm text-[#64748B] mt-3">
@@ -378,12 +418,12 @@ export const ManagementDashboard: React.FC<ManagementDashboardProps> = ({
       </div>
 
       {/* Sub-navigation: selected = soft fill + accent border (never a second solid-blue button) */}
-      <div role="group" aria-label="Studio sections" className="flex items-center gap-2.5 overflow-x-auto pb-2">
+      <div role="group" aria-label="Studio sections" className="flex items-center gap-2.5 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
         {[
-          { id: 'profile', label: '1. Profile & stage rider', icon: UserCheck },
-          { id: 'studio', label: `2. Tracks (${tracks.length})`, icon: Sliders },
-          { id: 'setlists', label: `3. Setlists (${setlists.length})`, icon: ListMusic },
-          { id: 'bookings', label: `4. Events & inquiries (${bookings.length})`, icon: CalendarCheck },
+          { id: 'bookings', label: `1. Inquiries & events (${bookings.length})`, icon: CalendarCheck },
+          { id: 'profile', label: '2. Profile & stage rider', icon: UserCheck },
+          { id: 'studio', label: `3. Tracks (${tracks.length})`, icon: Sliders },
+          { id: 'setlists', label: `4. Setlists (${setlists.length})`, icon: ListMusic },
         ].map((tab) => {
           const Icon = tab.icon;
           const active = activeTab === tab.id;
@@ -393,7 +433,7 @@ export const ManagementDashboard: React.FC<ManagementDashboardProps> = ({
               type="button"
               onClick={() => setActiveTab(tab.id as DashboardTab)}
               aria-pressed={active}
-              className={`h-12 px-5 rounded-xl text-sm font-semibold flex items-center gap-2 whitespace-nowrap border-[1.5px] transition-colors ${
+              className={`h-12 px-5 shrink-0 rounded-xl text-sm font-semibold flex items-center gap-2 whitespace-nowrap border-[1.5px] transition-colors ${
                 active
                   ? 'bg-[#EFF6FF] text-[#2563EB] border-[#2563EB] shadow-[inset_0_0_0_1px_#2563EB]'
                   : 'bg-white text-[#0F172A] border-[#64748B] hover:bg-[#EFF6FF]'
@@ -452,10 +492,35 @@ export const ManagementDashboard: React.FC<ManagementDashboardProps> = ({
                   type="text"
                   value={profile.tiktokHandle}
                   onChange={(e) =>
-                    onUpdateProfile({ ...profile, tiktokHandle: e.target.value })
+                    onUpdateProfile({
+                      ...profile,
+                      tiktokHandle: e.target.value,
+                      tiktokUrl: tiktokProfileUrl(e.target.value) ?? '',
+                    })
                   }
+                  aria-describedby="dash-f3-hint"
                   className="w-full h-12 px-3.5 rounded-xl bg-white border-[1.5px] border-[#64748B] text-base text-[#0F172A]"
                 />
+                <p id="dash-f3-hint" className="mt-1.5 text-sm text-[#64748B] break-all">
+                  {tiktokProfileUrl(profile.tiktokHandle) ? (
+                    <>
+                      Visitors open{' '}
+                      <a
+                        href={tiktokProfileUrl(profile.tiktokHandle)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-[#2563EB] underline underline-offset-4"
+                      >
+                        {tiktokProfileUrl(profile.tiktokHandle)}
+                      </a>{' '}
+                      (tap it to test).
+                    </>
+                  ) : profile.tiktokHandle.trim() ? (
+                    'Use only letters, numbers, underscores and full stops, for example EmmaRevelation_Official.'
+                  ) : (
+                    'Type the handle and the link is built for you.'
+                  )}
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-[#0F172A] mb-1.5" htmlFor="dash-f4">
@@ -483,8 +548,12 @@ export const ManagementDashboard: React.FC<ManagementDashboardProps> = ({
                 onChange={(e) =>
                   onUpdateProfile({ ...profile, heroTagline: e.target.value })
                 }
+                aria-describedby="dash-f5-hint"
                 className="w-full p-3.5 rounded-xl bg-white border-[1.5px] border-[#64748B] text-base text-[#0F172A]"
               />
+              <p id="dash-f5-hint" className="mt-1.5 text-sm text-[#64748B]">
+                Put <code className="font-mono">*stars*</code> around the words you want in blue. With no stars, the last two words are blue.
+              </p>
             </div>
 
             <div>
@@ -502,6 +571,25 @@ export const ManagementDashboard: React.FC<ManagementDashboardProps> = ({
               />
             </div>
 
+            <div>
+              <label className="block text-sm font-semibold text-[#0F172A] mb-1.5" htmlFor="dash-reply">
+                Reply note for people who book (optional)
+              </label>
+              <input
+                id="dash-reply"
+                type="text"
+                maxLength={160}
+                placeholder="Write how soon you reply, in your own words"
+                value={profile.replyNote ?? ''}
+                onChange={(e) => onUpdateProfile({ ...profile, replyNote: e.target.value })}
+                aria-describedby="dash-reply-hint"
+                className="w-full h-12 px-3.5 rounded-xl bg-white border-[1.5px] border-[#64748B] text-base text-[#0F172A]"
+              />
+              <p id="dash-reply-hint" className="mt-1.5 text-sm text-[#64748B]">
+                Shown under the Submit button and after a request is sent. Only promise what you can keep.
+              </p>
+            </div>
+
             {/* Key Highlights */}
             <div className="pt-2 border-t border-[#E2E8F0] space-y-3">
               <label htmlFor="dash-highlight" className="block text-sm font-semibold text-[#0F172A]">
@@ -514,11 +602,11 @@ export const ManagementDashboard: React.FC<ManagementDashboardProps> = ({
                   placeholder="Add a ministry or Musical Director highlight..."
                   value={newHighlight}
                   onChange={(e) => setNewHighlight(e.target.value)}
-                  className="flex-1 h-10 px-3.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] text-sm"
+                  className="flex-1 min-w-0 h-11 px-3.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] text-base sm:text-sm"
                 />
                 <button
                   type="submit"
-                  className="h-10 px-4 rounded-xl bg-[#2563EB] text-white text-sm font-semibold"
+                  className="h-11 px-4 shrink-0 whitespace-nowrap rounded-xl bg-[#2563EB] text-white text-sm font-semibold"
                 >
                   + Add
                 </button>
@@ -545,6 +633,99 @@ export const ManagementDashboard: React.FC<ManagementDashboardProps> = ({
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Media: photos and videos; the Media section appears on the site once there is one */}
+            <div className="pt-2 border-t border-[#E2E8F0] space-y-3">
+              <h3 className="text-sm font-semibold text-[#0F172A] flex items-center gap-2">
+                <Film className="w-4 h-4 text-[#2563EB]" aria-hidden="true" /> Media: photos &amp; videos ({(profile.media ?? []).length})
+              </h3>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const url = mediaUrl.trim();
+                  const ok = mediaKind === 'image' ? isSafeImageUrl(url) : parseVideoUrl(url) !== null;
+                  if (!ok) {
+                    onNotify(
+                      'error',
+                      mediaKind === 'image'
+                        ? 'A photo link must start with / (a file on this site) or https://.'
+                        : 'Paste a YouTube or Vimeo link, or a direct .mp4 / .webm file link.'
+                    );
+                    return;
+                  }
+                  onUpdateProfile({
+                    ...profile,
+                    media: [...(profile.media ?? []), { id: `md-${Date.now()}`, kind: mediaKind, url, title: mediaTitle.trim() }],
+                  });
+                  setMediaUrl('');
+                  setMediaTitle('');
+                }}
+                className="space-y-3"
+              >
+                <div className="flex gap-2" role="group" aria-label="Media type">
+                  {(['video', 'image'] as const).map((k) => (
+                    <button
+                      key={k}
+                      type="button"
+                      aria-pressed={mediaKind === k}
+                      onClick={() => setMediaKind(k)}
+                      className={`h-11 px-4 rounded-xl text-sm font-semibold border-[1.5px] ${
+                        mediaKind === k ? 'bg-[#EFF6FF] text-[#2563EB] border-[#2563EB]' : 'bg-white text-[#0F172A] border-[#64748B]'
+                      }`}
+                    >
+                      {k === 'video' ? 'Video' : 'Photo'}
+                    </button>
+                  ))}
+                </div>
+                <label className="block text-sm font-semibold text-[#0F172A]" htmlFor="dash-media-url">
+                  {mediaKind === 'video' ? 'Video link (YouTube, Vimeo, or .mp4)' : 'Photo link (/my-photo.jpg or https://…)'}
+                </label>
+                <input
+                  id="dash-media-url"
+                  type="url"
+                  inputMode="url"
+                  value={mediaUrl}
+                  onChange={(e) => setMediaUrl(e.target.value)}
+                  className="w-full h-12 px-3.5 rounded-xl bg-white border-[1.5px] border-[#64748B] text-base"
+                />
+                <label className="block text-sm font-semibold text-[#0F172A]" htmlFor="dash-media-title">
+                  Caption (optional)
+                </label>
+                <input
+                  id="dash-media-title"
+                  type="text"
+                  value={mediaTitle}
+                  onChange={(e) => setMediaTitle(e.target.value)}
+                  className="w-full h-12 px-3.5 rounded-xl bg-white border-[1.5px] border-[#64748B] text-base"
+                />
+                <button type="submit" className="h-11 px-4 rounded-xl bg-white hover:bg-[#EFF6FF] text-[#2563EB] border-[1.5px] border-[#2563EB] text-sm font-semibold inline-flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4" aria-hidden="true" /> Add to media
+                </button>
+              </form>
+              {(profile.media ?? []).length === 0 ? (
+                <p className="text-sm text-[#64748B]">No media yet. The Media section stays hidden until you add one.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {(profile.media ?? []).map((m) => (
+                    <li key={m.id} className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between gap-3 text-sm">
+                      <span className="min-w-0">
+                        <span className="font-semibold text-[#0F172A]">{m.kind === 'video' ? 'Video' : 'Photo'}</span>
+                        {m.title && <> · {m.title}</>}
+                        <span className="block text-[#64748B] truncate">{m.url}</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onUpdateProfile({ ...profile, media: (profile.media ?? []).filter((x) => x.id !== m.id) })}
+                        aria-label={`Remove ${m.kind}: ${m.title || m.url}`}
+                        className="text-[#BE123C] font-semibold hover:underline shrink-0"
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
 
@@ -642,13 +823,30 @@ export const ManagementDashboard: React.FC<ManagementDashboardProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {tracks.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-[#CBD5E1] bg-white p-8 text-center">
+              <Music2 className="w-8 h-8 text-[#2563EB] mx-auto" aria-hidden="true" />
+              <h3 className="text-lg font-serif font-bold text-[#0F172A] mt-3">No songs yet</h3>
+              <p className="text-base text-[#64748B] mt-1 max-w-md mx-auto">
+                Your first song fills the Music section and the player on the public site. Add its key, tempo and chords.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowNewTrackModal(true)}
+                className="mt-4 h-12 px-6 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold text-base inline-flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" aria-hidden="true" /> Add your first song
+              </button>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
             {stages.map((stage) => {
               const stageTracks = tracks.filter((t) => t.stage === stage);
               return (
                 <div
                   key={stage}
-                  className="rounded-2xl bg-white border border-[#E2E8F0] shadow-sm p-4 flex flex-col justify-between min-h-[320px]"
+                  className="rounded-2xl bg-white border border-[#E2E8F0] shadow-sm p-4 flex flex-col justify-between md:min-h-80"
                 >
                   <div>
                     <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#E2E8F0]">
@@ -677,7 +875,7 @@ export const ManagementDashboard: React.FC<ManagementDashboardProps> = ({
                             {track.genre}
                           </p>
 
-                          <div className="pt-2 flex items-center justify-between gap-1">
+                          <div className="pt-2 flex flex-wrap items-center justify-between gap-2">
                             <button
                               onClick={() => onPlayTrack(track)}
                               className="px-3 rounded-lg bg-white hover:bg-[#EFF6FF] border-[1.5px] border-[#2563EB] text-[#2563EB] text-xs font-semibold flex items-center gap-1"
@@ -699,7 +897,7 @@ export const ManagementDashboard: React.FC<ManagementDashboardProps> = ({
                                   e.target.value as ProductionStage
                                 )
                               }
-                              className="bg-white border border-[#E2E8F0] rounded px-2 py-1 text-[10px] text-[#0F172A]"
+                              className="min-w-0 flex-1 h-11 bg-white border border-[#64748B] rounded-lg px-2 text-sm text-[#0F172A]"
                             >
                               {stages.map((s) => (
                                 <option key={s} value={s}>
@@ -862,7 +1060,7 @@ export const ManagementDashboard: React.FC<ManagementDashboardProps> = ({
                           }}
                         />
                         <span className="truncate">{t.title}</span>
-                        <span className="ml-auto text-[10px] font-mono text-[#2563EB] font-bold">
+                        <span className="ml-auto text-xs font-mono text-[#2563EB] font-bold">
                           Key {t.key}
                         </span>
                       </label>
@@ -988,9 +1186,13 @@ export const ManagementDashboard: React.FC<ManagementDashboardProps> = ({
           </div>
 
           {bookings.length === 0 ? (
-            <p className="text-sm text-[#64748B] py-8 text-center">
-              No events or booking inquiries recorded yet.
-            </p>
+            <div className="rounded-2xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-8 text-center">
+              <Inbox className="w-8 h-8 text-[#2563EB] mx-auto" aria-hidden="true" />
+              <h3 className="text-lg font-serif font-bold text-[#0F172A] mt-3">Nothing here yet</h3>
+              <p className="text-base text-[#64748B] mt-1 max-w-md mx-auto">
+                Booking requests from the public form and the dates you add will appear here. Add a date and tick <em>Shown on Site</em> to put it on the Events section.
+              </p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -1115,7 +1317,7 @@ export const ManagementDashboard: React.FC<ManagementDashboardProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
                   <label className="block text-sm text-[#0F172A] font-semibold mb-1" htmlFor="dash-f15">
                     Key
@@ -1202,6 +1404,23 @@ export const ManagementDashboard: React.FC<ManagementDashboardProps> = ({
                   }
                   className="w-full h-12 px-3 rounded-xl bg-white border-[1.5px] border-[#64748B] text-base font-mono"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm text-[#0F172A] font-semibold mb-1" htmlFor="dash-audio">
+                  Audio file link (optional)
+                </label>
+                <input id="dash-audio"
+                  type="text"
+                  placeholder="/audio/my-song.mp3 or https://…"
+                  value={newTrack.audioUrl ?? ''}
+                  onChange={(e) => setNewTrack({ ...newTrack, audioUrl: e.target.value })}
+                  aria-describedby="dash-audio-hint"
+                  className="w-full h-12 px-3 rounded-xl bg-white border-[1.5px] border-[#64748B] text-base"
+                />
+                <p id="dash-audio-hint" className="mt-1 text-sm text-[#64748B]">
+                  Put the file in <code className="font-mono">public/audio/</code> and write <code className="font-mono">/audio/my-song.mp3</code>. With no file, the site plays the built-in worship pad.
+                </p>
               </div>
 
               <div>
@@ -1345,6 +1564,52 @@ export const ManagementDashboard: React.FC<ManagementDashboardProps> = ({
           </div>
         </div>
       )}
+
+      {/* LEVEL LAST: data safety. Careful: these change or remove everything stored in this browser. */}
+      <section aria-labelledby="careful-title" className="rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-6 sm:p-8 space-y-4">
+        <div>
+          <h2 id="careful-title" className="text-lg font-serif font-bold text-[#0F172A] flex items-center gap-2">
+            <ShieldAlert className="w-5 h-5 text-[#BE123C]" aria-hidden="true" /> Data safety (careful)
+          </h2>
+          <p className="text-sm text-[#64748B] mt-1 max-w-3xl">
+            Everything here is kept in this browser only. <strong className="text-[#0F172A]">Backup</strong> saves a copy to a file,{' '}
+            <strong className="text-[#0F172A]">Restore</strong> replaces what you have with a backup file, and{' '}
+            <strong className="text-[#BE123C]">Clear all data</strong> deletes it. Back up first.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:flex sm:flex-wrap sm:items-center gap-3">
+          <button
+            type="button"
+            onClick={handleExportJSON}
+            className="h-12 px-4 rounded-xl bg-white hover:bg-[#EFF6FF] text-[#0F172A] border-[1.5px] border-[#64748B] font-semibold text-sm flex items-center justify-center gap-1.5 transition-colors"
+          >
+            <Download className="w-4 h-4 text-[#2563EB]" aria-hidden="true" /> Backup (all data)
+          </button>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept="application/json,.json"
+            onChange={handleImportFile}
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden="true"
+          />
+          <button
+            type="button"
+            onClick={() => importInputRef.current?.click()}
+            className="h-12 px-4 rounded-xl bg-white hover:bg-[#EFF6FF] text-[#0F172A] border-[1.5px] border-[#64748B] font-semibold text-sm flex items-center justify-center gap-1.5 transition-colors"
+          >
+            <Upload className="w-4 h-4 text-[#2563EB]" aria-hidden="true" /> Restore backup
+          </button>
+          <button
+            type="button"
+            onClick={handleClearAll}
+            className="h-12 px-4 rounded-xl bg-white hover:bg-[#FFF1F2] text-[#BE123C] border-[1.5px] border-[#BE123C] font-semibold text-sm flex items-center justify-center gap-1.5 transition-colors"
+          >
+            <RotateCcw className="w-4 h-4" aria-hidden="true" /> Clear all data
+          </button>
+        </div>
+      </section>
     </motion.div>
   );
 };

@@ -1,3 +1,5 @@
+import containerQueries from '@tailwindcss/container-queries'
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -37,6 +39,8 @@ export default {
         display: ['Playfair Display', 'Georgia', 'serif'],
       },
       fontSize: {
+        'fluid-hero': ['clamp(2.5rem, 1.6rem + 4.5vw, 4.5rem)', { lineHeight: '1.05', letterSpacing: '-0.02em' }],
+        'fluid-h2': ['clamp(1.875rem, 1.5rem + 1.6vw, 2.5rem)', { lineHeight: '1.15', letterSpacing: '-0.01em' }],
         'hero': ['3.5rem', { lineHeight: '1.08', fontWeight: '800', letterSpacing: '-0.02em' }],
         'h1': ['2.25rem', { lineHeight: '1.2', fontWeight: '700', letterSpacing: '-0.015em' }],
         'h2': ['1.375rem', { lineHeight: '1.35', fontWeight: '700', letterSpacing: '-0.01em' }],
@@ -58,5 +62,5 @@ export default {
       }
     },
   },
-  plugins: [],
+  plugins: [containerQueries],
 }

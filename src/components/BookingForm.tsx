@@ -182,6 +182,9 @@ export function BookingForm({ profile, onSubmit }: BookingFormProps) {
             <p className="text-base">
               <strong>{result.status === 'sent' ? 'Request sent.' : 'Not sent yet.'}</strong> {result.message}
             </p>
+            {result.status === 'sent' && profile.replyNote?.trim() && (
+              <p className="text-base text-[#0F172A]">{profile.replyNote.trim()}</p>
+            )}
             {result.status === 'not-configured' && mailto && (
               <a
                 href={mailto}
@@ -207,7 +210,7 @@ export function BookingForm({ profile, onSubmit }: BookingFormProps) {
       )}
 
       {phase !== 'done' && (
-        <form ref={formRef} onSubmit={handleSubmit} noValidate className="space-y-8" aria-label={`Book ${profile.artistName}`}>
+        <form ref={formRef} onSubmit={handleSubmit} noValidate className="@container space-y-8" aria-label={`Book ${profile.artistName}`}>
           <p className="text-sm text-[#64748B]">
             <span aria-hidden="true">*</span> required. Other fields are optional.
           </p>
@@ -247,9 +250,9 @@ export function BookingForm({ profile, onSubmit }: BookingFormProps) {
             </label>
           </div>
 
-          <fieldset className="p-6 rounded-xl bg-white border border-[#E2E8F0] space-y-6">
+          <fieldset className="p-4 sm:p-6 rounded-xl bg-white border border-[#E2E8F0] space-y-6">
             <legend className="px-2 text-sm font-bold uppercase tracking-wider text-[#2563EB]">1. Event details</legend>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 @lg:grid-cols-2 gap-6">
               <Field ctx={ctx} name="eventName" label="Event / program title" required>
                 {(p) => <input {...p} type="text" maxLength={120} autoComplete="off" value={draft.eventName} onChange={(e) => set('eventName', e.target.value)} />}
               </Field>
@@ -271,10 +274,10 @@ export function BookingForm({ profile, onSubmit }: BookingFormProps) {
             </div>
           </fieldset>
 
-          <fieldset className="p-6 rounded-xl bg-white border border-[#E2E8F0] space-y-6">
+          <fieldset className="p-4 sm:p-6 rounded-xl bg-white border border-[#E2E8F0] space-y-6">
             <legend className="px-2 text-sm font-bold uppercase tracking-wider text-[#2563EB]">2. Schedule, place & budget</legend>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <Field ctx={ctx} name="date" label="Event date" required>
+            <div className="grid grid-cols-1 @lg:grid-cols-2 @2xl:grid-cols-3 gap-6">
+              <Field ctx={ctx} name="date" label="Event date" required hint="Tap the box to choose a date.">
                 {(p) => <input {...p} type="date" min={todayISO()} value={draft.date} onChange={(e) => set('date', e.target.value)} />}
               </Field>
               <Field ctx={ctx} name="time" label="Start time" optional>
@@ -286,7 +289,7 @@ export function BookingForm({ profile, onSubmit }: BookingFormProps) {
                 )}
               </Field>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 @lg:grid-cols-2 gap-6">
               <Field ctx={ctx} name="venue" label="Venue" required>
                 {(p) => <input {...p} type="text" maxLength={120} autoComplete="off" value={draft.venue} onChange={(e) => set('venue', e.target.value)} />}
               </Field>
@@ -296,9 +299,9 @@ export function BookingForm({ profile, onSubmit }: BookingFormProps) {
             </div>
           </fieldset>
 
-          <fieldset className="p-6 rounded-xl bg-white border border-[#E2E8F0] space-y-6">
+          <fieldset className="p-4 sm:p-6 rounded-xl bg-white border border-[#E2E8F0] space-y-6">
             <legend className="px-2 text-sm font-bold uppercase tracking-wider text-[#2563EB]">3. Ministry details & contact</legend>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 @lg:grid-cols-2 gap-6">
               <Field ctx={ctx} name="contactPhone" label="Phone / WhatsApp" required hint="Used only to reply to your request.">
                 {(p) => <input {...p} type="tel" inputMode="tel" autoComplete="tel" maxLength={40} value={draft.contactPhone} onChange={(e) => set('contactPhone', e.target.value)} />}
               </Field>
@@ -327,7 +330,8 @@ export function BookingForm({ profile, onSubmit }: BookingFormProps) {
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row sm:justify-end gap-4 pt-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4 pt-2">
+            {profile.replyNote?.trim() && <p className="text-sm text-[#64748B] sm:text-right">{profile.replyNote.trim()}</p>}
             <button
               type="submit"
               disabled={phase === 'submitting'}

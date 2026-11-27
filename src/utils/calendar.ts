@@ -59,3 +59,29 @@ export function downloadIcs(evt: BookingEvent, artistName: string): boolean {
   URL.revokeObjectURL(url);
   return true;
 }
+
+/** A "add to Google Calendar" link for an event (all-day when no time is set). null when the date is not usable. */
+export function googleCalendarUrl(evt: BookingEvent, artistName: string): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(evt.date);
+  if (!m) return null;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const t = /^(\d{2}):(\d{2})$/.exec(evt.time ?? '');
+  const fmt = (dt: Date) => `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}`;
+  let dates: string;
+  if (t) {
+    const start = new Date(y, mo - 1, d, Number(t[1]), Number(t[2]));
+    const end = new Date(y, mo - 1, d, Number(t[1]) + 2, Number(t[2]));
+    const f = (dt: Date) => `${fmt(dt)}T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
+    dates = `${f(start)}/${f(end)}`;
+  } else {
+    dates = `${fmt(new Date(y, mo - 1, d))}/${fmt(new Date(y, mo - 1, d + 1))}`;
+  }
+  const q = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: `${evt.eventName} — ${artistName}`,
+    dates,
+    location: [evt.venue, evt.city].filter(Boolean).join(', '),
+    details: [evt.organizer && `Host: ${evt.organizer}`, evt.notes].filter(Boolean).join('\n'),
+  });
+  return `https://calendar.google.com/calendar/render?${q.toString()}`;
+}

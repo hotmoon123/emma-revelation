@@ -30,7 +30,11 @@ import type { DeliveryResult } from '../utils/emailService';
 import type { BookingDraft } from '../utils/validation';
 import { Equalizer, SoundWaves, Staff, Vinyl } from './music/MusicMotion';
 import { beatSeconds, playResolve, playTapNote, swingDelay } from '../utils/music';
-import { formatEventDate, hasAboutContent, safeHttpsUrl, upcomingPublicEvents } from '../utils/content';
+import { SmartImage } from './ui/SmartImage';
+import { formatEventDate, hasAboutContent, taglineParts, tiktokProfileUrl, upcomingPublicEvents } from '../utils/content';
+import { googleCalendarUrl } from '../utils/calendar';
+import { MediaSection } from './MediaSection';
+import { useAfterFirstPaint } from '../hooks/useAfterFirstPaint';
 
 const ThreeSoundstage = lazy(() => import('./ThreeSoundstage').then((m) => ({ default: m.ThreeSoundstage })));
 
@@ -52,8 +56,19 @@ const MOTION_KEY = 'emma_rev_motion_v1';
 const TAP_KEY = 'emma_rev_tapnotes_v1';
 const BTN_SECONDARY =
   'h-11 px-4 rounded-xl bg-white hover:bg-[#EFF6FF] text-[#2563EB] border-[1.5px] border-[#2563EB] text-sm font-semibold inline-flex items-center justify-center gap-2 transition-colors';
+/** Small blue label above each section title: level 3 of the hierarchy (where am I) */
+const EYEBROW = 'text-sm font-bold tracking-widest uppercase text-[#2563EB]';
+
+/** Sections fade up once as they scroll into view. Reduced-motion users get the fade only (MotionConfig). */
+const REVEAL = {
+  initial: { opacity: 0, y: 14 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, amount: 0.08 },
+  transition: { duration: 0.45, ease: 'easeOut' as const },
+};
+
 const LINK_TERTIARY =
-  'inline-flex items-center gap-1.5 text-base font-semibold text-[#2563EB] hover:text-[#1D4ED8] hover:underline underline-offset-4 min-h-[44px]';
+  'inline-flex items-center gap-1.5 text-base font-semibold text-[#2563EB] hover:text-[#1D4ED8] hover:underline underline-offset-4 min-h-11';
 
 export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
   profile,
@@ -146,7 +161,9 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
     return matchesGenre && matchesSearch;
   });
 
+  const sceneReady = useAfterFirstPaint();
   const publicEvents = upcomingPublicEvents(bookings);
+  const nextEvent = publicEvents[0] ?? null;
   const showAbout = hasAboutContent(profile);
   const portraitAlt = `Portrait of ${profile.artistName}`;
 
@@ -190,16 +207,16 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
       </p>
 
       {/* 1. HERO: who is Emma, what next. Two buttons only: Book (primary), Listen (secondary). */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-white via-[#F8FAFC] to-white border-b border-[#E2E8F0] pt-12 pb-28 lg:py-24">
+      <section className="relative overflow-hidden bg-[radial-gradient(ellipse_at_top_left,#EFF6FF_0%,#FFFFFF_55%)] border-b border-[#E2E8F0] pt-12 pb-28 lg:py-28">
         <div className="absolute inset-0 w-full h-full z-0 opacity-60 pointer-events-none" aria-hidden="true">
           <Suspense fallback={null}>
-            <ThreeSoundstage
+            {sceneReady && <ThreeSoundstage
               isPlaying={isPlaying}
               bpm={currentTrack?.bpm || 72}
               musicalKey={currentTrack?.key || 'C'}
               paused={motionPaused}
               onAvailable={setSceneAvailable}
-            />
+            />}
           </Suspense>
         </div>
 
@@ -225,12 +242,22 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
                 </p>
               )}
 
-              <h1 className="text-4xl sm:text-6xl font-serif font-bold text-[#0F172A] tracking-tight leading-[1.1]">
+              <h1 className="text-fluid-hero font-serif font-bold text-[#0F172A] tracking-tight leading-[1.05]">
                 {profile.artistName}
               </h1>
 
               {profile.heroTagline && (
-                <p className="text-lg text-[#64748B] max-w-2xl leading-relaxed">{profile.heroTagline}</p>
+                <p className="text-lg sm:text-xl text-[#64748B] max-w-2xl leading-relaxed">
+                  {taglineParts(profile.heroTagline).map((part, i) =>
+                    part.accent ? (
+                      <span key={i} className="text-[#2563EB] font-semibold">
+                        {part.text}
+                      </span>
+                    ) : (
+                      <span key={i}>{part.text}</span>
+                    )
+                  )}
+                </p>
               )}
 
               <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4 pt-2">
@@ -253,20 +280,37 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
                   </button>
                 )}
               </div>
+
+              {nextEvent && (
+                <a
+                  href="#events"
+                  className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 min-h-11 text-base text-[#0F172A] hover:text-[#2563EB] group"
+                >
+                  <span className="px-2.5 py-0.5 rounded-full bg-white border border-[#E2E8F0] text-[#2563EB] text-sm font-bold">Next</span>
+                  <span className="font-semibold">{nextEvent.eventName}</span>
+                  <span className="text-[#64748B]">
+                    {formatEventDate(nextEvent.date)}
+                    {nextEvent.city ? `, ${nextEvent.city}` : ''}
+                  </span>
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                </a>
+              )}
             </div>
 
             {profile.portraitUrl && (
               <div className="lg:col-span-5 flex justify-center">
                 <div className="relative max-w-md w-full">
                   <Vinyl playing={isPlaying} />
+                  <div aria-hidden="true" className="absolute inset-0 translate-x-3 translate-y-3 rounded-2xl border-2 border-[#2563EB]/40" />
                   <div className="relative z-10 rounded-2xl overflow-hidden bg-white border border-[#E2E8F0] shadow-md">
-                  <img
+                  <SmartImage
                     src={profile.portraitUrl}
                     alt={portraitAlt}
                     width={864}
                     height={1080}
-                    fetchPriority="high"
-                    className="w-full h-72 sm:h-96 lg:h-[460px] object-cover object-top bg-white"
+                    priority
+                    sizes="(min-width: 1024px) 448px, 92vw"
+                    className="w-full h-72 sm:h-96 lg:h-[28.75rem] object-cover object-top bg-white"
                   />
                   </div>
                 </div>
@@ -278,11 +322,11 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
 
       {/* 2. ABOUT: only exists when the owner has supplied something to say */}
       {showAbout && (
-        <section id="epk" aria-labelledby="about-title" className="bg-[#F8FAFC] border-b border-[#E2E8F0] py-16 lg:py-20">
+        <motion.section id="epk" {...REVEAL} aria-labelledby="about-title" className="bg-[#F8FAFC] border-b border-[#E2E8F0] py-16 lg:py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="rounded-2xl bg-white border border-[#E2E8F0] shadow-sm p-6 sm:p-12 space-y-8">
               <div className="space-y-4 max-w-3xl">
-                <h2 id="about-title" className="text-3xl sm:text-4xl font-serif font-bold text-[#0F172A]">
+                <h2 id="about-title" className="text-fluid-h2 font-serif font-bold text-[#0F172A]">
                   About {profile.artistName}
                 </h2>
                 {profile.location && (
@@ -308,9 +352,9 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
               </div>
 
               {profile.stageRider.length > 0 && (
-                <div>
+                <div className="@container">
                   <h3 className="text-xl font-serif font-bold text-[#0F172A] mb-4">Stage rider</h3>
-                  <dl className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <dl className="grid grid-cols-1 @2xl:grid-cols-3 gap-4">
                     {profile.stageRider.map((rider) => (
                       <div key={rider.id} className="p-6 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0]">
                         <dt className="text-base font-semibold text-[#0F172A]">{rider.category}</dt>
@@ -322,18 +366,21 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
               )}
             </div>
           </div>
-        </section>
+        </motion.section>
       )}
 
       {/* 3. MUSIC: 3-column card grid, or an honest status with a path forward */}
-      <section id="discography" aria-labelledby="music-title" className="bg-white py-16 lg:py-20 border-b border-[#E2E8F0]">
+      <motion.section id="discography" {...REVEAL} aria-labelledby="music-title" className="bg-white py-16 lg:py-20 border-b border-[#E2E8F0]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
-            <div className="flex items-center gap-5">
-              <h2 id="music-title" className="text-3xl sm:text-4xl font-serif font-bold text-[#0F172A]">
-                Music
-              </h2>
-              <Staff className="hidden sm:block shrink-0" />
+            <div className="flex items-center gap-5 shrink-0">
+              <div>
+                <p className={EYEBROW}>Listen</p>
+                <h2 id="music-title" className="text-fluid-h2 font-serif font-bold text-[#0F172A] whitespace-nowrap mt-1">
+                  Music
+                </h2>
+              </div>
+              <Staff className="hidden lg:block shrink-0" />
             </div>
 
             <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
@@ -444,13 +491,14 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
                     <div>
                       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
                         <div className="flex items-center gap-3 min-w-0">
-                          <img
+                          <SmartImage
                             src={track.coverUrl || profile.portraitUrl}
                             alt=""
                             width={48}
                             height={48}
-                            loading="lazy"
-                            className="w-12 h-12 rounded-xl object-cover object-top border border-[#E2E8F0] shrink-0"
+                            sizes="48px"
+                            wrapperClassName="w-12 h-12 rounded-xl shrink-0"
+                            className="w-12 h-12 rounded-xl object-cover object-top border border-[#E2E8F0]"
                           />
                           <span className="text-sm font-bold uppercase tracking-wider text-[#2563EB]">
                             {track.genre}
@@ -567,12 +615,14 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
                 >
                   <div className="flex items-start justify-between gap-4 pb-4 border-b border-[#E2E8F0]">
                     <div className="flex items-center gap-3.5 min-w-0">
-                      <img
+                      <SmartImage
                         src={selectedSongForChords.coverUrl || profile.portraitUrl}
                         alt=""
                         width={56}
                         height={56}
-                        className="w-14 h-14 rounded-xl object-cover object-top border border-[#E2E8F0] shrink-0"
+                        sizes="56px"
+                        wrapperClassName="w-14 h-14 rounded-xl shrink-0"
+                        className="w-14 h-14 rounded-xl object-cover object-top border border-[#E2E8F0]"
                       />
                       <div className="min-w-0">
                         <h3 id="sheet-title" className="text-2xl font-serif font-bold text-[#0F172A]">
@@ -660,15 +710,18 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
             )}
           </AnimatePresence>
         </div>
-      </section>
+      </motion.section>
 
       {/* 4. EVENTS */}
-      <section id="events" aria-labelledby="events-title" className="bg-[#F8FAFC] py-16 lg:py-20 border-b border-[#E2E8F0]">
+      <motion.section id="events" {...REVEAL} aria-labelledby="events-title" className="bg-[#F8FAFC] py-16 lg:py-20 border-b border-[#E2E8F0]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
-            <h2 id="events-title" className="text-3xl sm:text-4xl font-serif font-bold text-[#0F172A]">
-              Events
-            </h2>
+            <div>
+              <p className={EYEBROW}>Live</p>
+              <h2 id="events-title" className="text-fluid-h2 font-serif font-bold text-[#0F172A] mt-1">
+                Events
+              </h2>
+            </div>
             {publicEvents.length > 0 && (
               <a href="#booking" className={LINK_TERTIARY}>
                 Book {firstName} <ArrowRight className="w-4 h-4" aria-hidden="true" />
@@ -686,12 +739,15 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {publicEvents.map((evt) => (
+              {publicEvents.map((evt, idx) => (
                 <article
                   key={evt.id}
-                  className="rounded-2xl p-6 sm:p-8 bg-white border border-[#E2E8F0] shadow-sm hover:shadow-md flex flex-col justify-between gap-5 transition-shadow"
+                  className={`@container rounded-2xl p-6 sm:p-8 bg-white border shadow-sm hover:shadow-md hover:-translate-y-0.5 flex flex-col justify-between gap-5 transition-[box-shadow,transform] duration-150 ${
+                    idx === 0 ? 'md:col-span-2 border-[#2563EB] border-l-4' : 'border-[#E2E8F0]'
+                  }`}
                 >
                   <div>
+                    {idx === 0 && <p className={`${EYEBROW} mb-2`}>Next up</p>}
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                       <span className="px-3 py-1 rounded-full text-sm font-bold bg-[#EFF6FF] text-[#2563EB] border border-[#E2E8F0]">
                         {evt.eventType}
@@ -706,14 +762,14 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
                         </span>
                       )}
                     </div>
-                    <h3 className="text-2xl font-serif font-bold text-[#0F172A]">{evt.eventName}</h3>
+                    <h3 className={`font-serif font-bold text-[#0F172A] ${idx === 0 ? 'text-3xl' : 'text-2xl'}`}>{evt.eventName}</h3>
                     {evt.organizer && (
                       <p className="text-sm text-[#64748B] mt-1">
                         Host: <strong className="text-[#0F172A]">{evt.organizer}</strong>
                       </p>
                     )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 text-sm text-[#0F172A]">
+                    <div className="grid grid-cols-1 @md:grid-cols-2 gap-3 mt-4 text-sm text-[#0F172A]">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-[#2563EB] shrink-0" aria-hidden="true" />
                         <span>
@@ -731,7 +787,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
                     {evt.notes && <p className="text-base text-[#64748B] mt-3 leading-relaxed">{evt.notes}</p>}
                   </div>
 
-                  <div className="pt-4 border-t border-[#E2E8F0]">
+                  <div className="pt-4 border-t border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
                     <button
                       type="button"
                       onClick={() => handleRsvp(evt)}
@@ -746,21 +802,36 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
                         'RSVP / Reminder'
                       )}
                     </button>
+                    {googleCalendarUrl(evt, profile.artistName) && (
+                      <a
+                        href={googleCalendarUrl(evt, profile.artistName) ?? undefined}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Add ${evt.eventName} to Google Calendar (opens a new tab)`}
+                        className={LINK_TERTIARY}
+                      >
+                        <Calendar className="w-4 h-4" aria-hidden="true" /> Google Calendar
+                      </a>
+                    )}
                   </div>
                 </article>
               ))}
             </div>
           )}
         </div>
-      </section>
+      </motion.section>
+
+      {/* 4b. MEDIA: exists only when the owner added photos or videos */}
+      <MediaSection items={profile.media} />
 
       {/* 5. BOOK: spacious #F8FAFC container, contact shown prominently, one primary button */}
-      <section id="booking" aria-labelledby="booking-title" className="bg-white py-16 lg:py-20">
+      <motion.section id="booking" {...REVEAL} aria-labelledby="booking-title" className="bg-white py-16 lg:py-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] shadow-sm p-6 sm:p-12">
+          <div className="rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] shadow-sm p-4 sm:p-12">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 mb-8 border-b border-[#E2E8F0]">
               <div>
-                <h2 id="booking-title" className="text-3xl sm:text-4xl font-serif font-bold text-[#0F172A]">
+                <p className={EYEBROW}>Book</p>
+                <h2 id="booking-title" className="text-fluid-h2 font-serif font-bold text-[#0F172A] mt-1">
                   Book {profile.artistName}
                 </h2>
                 <p className="text-base text-[#64748B] mt-2 max-w-xl">
@@ -773,9 +844,9 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
                   <p className="font-semibold text-[#0F172A]">Or contact directly</p>
                   {profile.tiktokHandle && (
                     <p className="text-[#0F172A] flex">
-                      {safeHttpsUrl(profile.tiktokUrl) ? (
+                      {tiktokProfileUrl(profile.tiktokHandle, profile.tiktokUrl) ? (
                         <a
-                          href={safeHttpsUrl(profile.tiktokUrl)}
+                          href={tiktokProfileUrl(profile.tiktokHandle, profile.tiktokUrl)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 hover:text-[#2563EB] hover:underline underline-offset-4"
@@ -814,7 +885,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
             <BookingForm profile={profile} onSubmit={onSubmitBooking} />
           </div>
         </div>
-      </section>
+      </motion.section>
     </motion.div>
   );
 };

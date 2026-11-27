@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { INITIAL_PORTFOLIO_CONFIG } from '../data/initialData';
 import type { BookingEvent } from '../types/music';
-import { formatEventDate, hasAboutContent, safeHttpsUrl, upcomingPublicEvents } from '../utils/content';
+import { formatEventDate, hasAboutContent, safeHttpsUrl, tiktokProfileUrl, upcomingPublicEvents } from '../utils/content';
 import { buildPublishedContent } from '../utils/publish';
 import { parsePortfolioBackup } from '../utils/validation';
 
@@ -93,5 +93,20 @@ describe('Publishing (Q1): private data never leaves the owner browser', () => {
   });
   it('round-trips through the importer', () => {
     expect(parsePortfolioBackup(JSON.stringify(built)).ok).toBe(true);
+  });
+});
+
+describe('tiktokProfileUrl', () => {
+  it('builds the profile link from the handle, with or without @', () => {
+    expect(tiktokProfileUrl('EmmaRevelation_Official')).toBe('https://www.tiktok.com/@EmmaRevelation_Official');
+    expect(tiktokProfileUrl('  @EmmaRevelation_Official ')).toBe('https://www.tiktok.com/@EmmaRevelation_Official');
+  });
+  it('accepts a pasted TikTok link and drops tracking parameters', () => {
+    expect(tiktokProfileUrl('https://www.tiktok.com/@abc.def?lang=en&utm=x')).toBe('https://www.tiktok.com/@abc.def');
+  });
+  it('rejects odd handles and falls back only when the handle is empty', () => {
+    expect(tiktokProfileUrl('bad handle!', 'https://www.tiktok.com/@old')).toBeUndefined();
+    expect(tiktokProfileUrl('', 'https://www.tiktok.com/@old')).toBe('https://www.tiktok.com/@old');
+    expect(tiktokProfileUrl('', 'javascript:alert(1)')).toBeUndefined();
   });
 });

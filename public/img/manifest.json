@@ -1,0 +1,15 @@
+{
+  "emma-portrait": {
+    "width": 864,
+    "height": 1080,
+    "widths": [
+      480,
+      864
+    ],
+    "formats": [
+      "avif",
+      "webp"
+    ],
+    "fallback": "img/emma-portrait-864.jpg"
+  }
+}

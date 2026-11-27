@@ -33,3 +33,40 @@ export function formatEventDate(iso: string): string {
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 }
+
+/**
+ * Builds the TikTok profile link from the handle the owner typed.
+ * Accepts "Name", "@Name", or a pasted link such as "https://www.tiktok.com/@Name?lang=en".
+ * Returns undefined when the handle is empty or has characters TikTok does not allow
+ * (TikTok user names use letters, numbers, underscores and full stops).
+ */
+export const tiktokProfileUrl = (handle: string, fallbackUrl = ''): string | undefined => {
+  let h = (handle || '').trim();
+  const fromLink = h.match(/tiktok\.com\/@([^/?#\s]+)/i);
+  if (fromLink) h = fromLink[1];
+  h = h.replace(/^@+/, '');
+  if (/^[A-Za-z0-9._]{2,24}$/.test(h)) return `https://www.tiktok.com/@${h}`;
+  // Handle is empty or odd: fall back to a saved https link, if any.
+  return h ? undefined : safeHttpsUrl(fallbackUrl);
+};
+
+/**
+ * Hero tagline accent: words the owner wraps in *stars* are shown in blue.
+ * With no stars, the last two words get the accent (only when the tagline has 4+ words).
+ */
+export function taglineParts(text: string): { text: string; accent: boolean }[] {
+  const t = text.trim();
+  if (!t) return [];
+  if (/\*[^*]+\*/.test(t)) {
+    return t
+      .split(/(\*[^*]+\*)/)
+      .filter(Boolean)
+      .map((seg) => (/^\*[^*]+\*$/.test(seg) ? { text: seg.slice(1, -1), accent: true } : { text: seg, accent: false }));
+  }
+  const words = t.split(/\s+/);
+  if (words.length < 4) return [{ text: t, accent: false }];
+  return [
+    { text: `${words.slice(0, -2).join(' ')} `, accent: false },
+    { text: words.slice(-2).join(' '), accent: true },
+  ];
+}

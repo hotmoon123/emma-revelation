@@ -96,7 +96,7 @@ export const Playhead: React.FC = () => {
     <motion.div
       aria-hidden="true"
       style={{ scaleX: x }}
-      className="absolute left-0 right-0 -bottom-px h-[3px] origin-left bg-[#2563EB] pointer-events-none"
+      className="absolute left-0 right-0 -bottom-px h-[0.1875rem] origin-left bg-[#2563EB] pointer-events-none"
     />
   );
 };

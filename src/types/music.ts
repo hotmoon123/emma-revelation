@@ -8,6 +8,14 @@ export interface StageRiderItem {
   details: string;
 }
 
+export interface MediaItem {
+  id: string;
+  /** a photo, or a video: a YouTube / Vimeo link, or a direct .mp4 / .webm file */
+  kind: 'image' | 'video';
+  url: string;
+  title: string;
+}
+
 export interface PortfolioConfig {
   artistName: string;
   roleBadge: string;
@@ -24,6 +32,10 @@ export interface PortfolioConfig {
   stageRider: StageRiderItem[];
   genres: string[];
   eventCategories: string[];
+  /** optional: shown after a booking request, e.g. "Emma replies within 2 working days" (owner-written) */
+  replyNote?: string;
+  /** optional gallery: the Media section appears only when this has items */
+  media?: MediaItem[];
 }
 
 export interface Track {

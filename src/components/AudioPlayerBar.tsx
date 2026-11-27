@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { usePlayerInset } from '../hooks/usePlayerInset';
+import { SmartImage } from './ui/SmartImage';
 import {
   Play,
   Pause,
@@ -112,7 +113,7 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
         aria-label="Audio player (minimised)"
         className="fixed bottom-4 right-4 z-50 flex items-center gap-3 p-2.5 pr-3 rounded-2xl bg-white border border-[#2563EB] shadow-lg"
       >
-        <div className="max-w-[150px] truncate">
+        <div className="max-w-[9.375rem] truncate">
           <p className="text-sm font-bold text-[#0F172A] truncate">{currentTrack.title}</p>
           <p className="text-xs text-[#64748B] font-mono font-semibold">
             Key {transposedKey} • {currentTrack.bpm} BPM
@@ -266,14 +267,16 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
         </div>
 
         {/* DESKTOP / TABLET */}
-        <div className="hidden sm:flex min-h-[72px] py-2 px-4 lg:px-8 items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0 sm:min-w-[180px] sm:max-w-[280px]">
-            <img
+        <div className="hidden sm:flex min-h-[4.5rem] py-2 px-4 lg:px-8 items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0 sm:min-w-[11.25rem] sm:max-w-[17.5rem]">
+            <SmartImage
               src={currentTrack.coverUrl || profile.portraitUrl}
               alt=""
               width={48}
               height={48}
-              className="w-12 h-12 rounded-xl object-cover object-top border border-[#E2E8F0] shrink-0"
+              sizes="48px"
+              wrapperClassName="w-12 h-12 rounded-xl shrink-0"
+              className="w-12 h-12 rounded-xl object-cover object-top border border-[#E2E8F0]"
             />
             <div className="min-w-0">
               <p className="text-sm font-bold text-[#0F172A] truncate">{currentTrack.title}</p>
@@ -326,7 +329,7 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
                 type="button"
                 onClick={toggleMute}
                 aria-label={isMuted || volume === 0 ? 'Unmute' : 'Mute'}
-                className="target-auto text-[#0F172A] hover:text-[#2563EB] w-8 h-11 flex items-center justify-center"
+                className="target-auto text-[#0F172A] hover:text-[#2563EB] w-11 h-11 flex items-center justify-center"
               >
                 {isMuted || volume === 0 ? <VolumeX className="w-4 h-4 text-[#BE123C]" aria-hidden="true" /> : <Volume2 className="w-4 h-4 text-[#2563EB]" aria-hidden="true" />}
               </button>
