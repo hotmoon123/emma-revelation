@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ImageOff } from 'lucide-react';
+import { withBase } from '../../utils/basePath';
 import { imageKey, loadImageManifest, srcSetFor, type ImageSet } from '../../utils/imageSets';
 
 interface Props {
@@ -74,7 +75,7 @@ export function SmartImage({ src, alt, width, height, className = '', wrapperCla
           <img {...imgProps} src={`${base}${set.fallback.replace(/^\//, '')}`} />
         </picture>
       ) : (
-        <img {...imgProps} src={src} />
+        <img {...imgProps} src={withBase(src)} />
       )}
     </span>
   );

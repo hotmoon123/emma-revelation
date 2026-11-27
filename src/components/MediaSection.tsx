@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ExternalLink, Play } from 'lucide-react';
 import type { MediaItem } from '../types/music';
+import { withBase } from "../utils/basePath";
 import { parseVideoUrl, usableMedia } from '../utils/media';
 import { SmartImage } from './ui/SmartImage';
 
@@ -72,7 +73,7 @@ export function MediaSection({ items }: { items: MediaItem[] | undefined }) {
               <VideoCard key={m.id} item={m} />
             ) : (
               <figure key={m.id} className="rounded-2xl overflow-hidden bg-white border border-[#E2E8F0] shadow-sm">
-                <a href={m.url} target="_blank" rel="noopener noreferrer" aria-label={`Open full-size photo: ${m.title || 'Photo'}`} className="block">
+                <a href={withBase(m.url)} target="_blank" rel="noopener noreferrer" aria-label={`Open full-size photo: ${m.title || 'Photo'}`} className="block">
                   <SmartImage
                     src={m.url}
                     alt={m.title || 'Photo'}

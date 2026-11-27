@@ -28,6 +28,8 @@ function siteUrl(mode: string): Plugin {
 }
 
 export default defineConfig(({ mode }) => ({
+  // GitHub Pages serves a project site from /<repo>/. The deploy workflow sets VITE_BASE=/emma-revelation/; locally it is "/".
+  base: process.env.VITE_BASE || '/',
   plugins: [react(), studioRoute(), siteUrl(mode)],
   server: {
     host: '0.0.0.0',

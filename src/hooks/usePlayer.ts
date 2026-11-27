@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Track } from '../types/music';
 import { soundEngine } from '../utils/soundEngine';
+import { withBase } from '../utils/basePath';
 
 /**
  * The shared audio player. A track with an `audioUrl` plays that real file; a track without one
@@ -26,7 +27,7 @@ export function usePlayer(tracks: Track[], onProblem?: (message: string) => void
     }
   }, [tracks, currentTrack]);
 
-  const audioUrl = currentTrack?.audioUrl?.trim() || '';
+  const audioUrl = withBase(currentTrack?.audioUrl?.trim() || '');
 
   // playback: real file, or the synth
   useEffect(() => {

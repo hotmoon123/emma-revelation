@@ -92,3 +92,18 @@ describe('Google Calendar link', () => {
     expect(googleCalendarUrl(evt({ date: 'Soon' }), 'E')).toBeNull();
   });
 });
+
+import { withBase } from '../utils/basePath';
+describe('sub-folder hosting (GitHub Pages)', () => {
+  it('adds the sub-folder to this site\'s own files', () => {
+    expect(withBase('/audio/a.mp3', '/emma-revelation/')).toBe('/emma-revelation/audio/a.mp3');
+    expect(withBase('/emma-portrait.jpg', '/emma-revelation')).toBe('/emma-revelation/emma-portrait.jpg');
+  });
+  it('leaves links, empty values and already-prefixed paths alone', () => {
+    expect(withBase('https://x.com/a.mp3', '/emma-revelation/')).toBe('https://x.com/a.mp3');
+    expect(withBase('//cdn.x.com/a.jpg', '/emma-revelation/')).toBe('//cdn.x.com/a.jpg');
+    expect(withBase('/emma-revelation/a.jpg', '/emma-revelation/')).toBe('/emma-revelation/a.jpg');
+    expect(withBase('', '/emma-revelation/')).toBe('');
+    expect(withBase('/a.jpg', '/')).toBe('/a.jpg');
+  });
+});
